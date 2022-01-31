@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.0;
 
-import "openzeppelin/interfaces/IERC20.sol";
-import "openzeppelin/interfaces/IWETH9.sol";
-import "openzeppelin/interfaces/IERC1155.sol";
-import "openzeppelin/utils/introspection/ERC165Checker.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "../IWETH9.sol";
+import "@openzeppelin/contracts/interfaces/IERC1155.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import "../core/interfaces/IYapeswapFactory.sol";
+import "../ERC20TransferHelper.sol";
 import "./interfaces/IYapeswapRouter.sol";
-import "openzeppelin/utils/ERC20TransferHelper.sol";
 import "./libraries/YapeswapLibrary.sol";
-import "openzeppelin/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract YapeswapRouter is IYapeswapRouter {
     using SafeMath for uint256;
@@ -109,9 +109,7 @@ contract YapeswapRouter is IYapeswapRouter {
         }
     }
 
-    function addLiquidity(
-        AddLiquidityInfo calldata addInfo
-    )
+    function addLiquidity(AddLiquidityInfo calldata addInfo)
         external
         virtual
         override
@@ -122,24 +120,24 @@ contract YapeswapRouter is IYapeswapRouter {
             uint256 liquidity
         )
     {
-            (amountA, amountB) = _addLiquidity(
-                addInfo.tokenA,
-                addInfo.tokenAsub,
-                addInfo.tokenB,
-                addInfo.tokenBsub,
-                addInfo.amountADesired,
-                addInfo.amountBDesired,
-                addInfo.amountAMin,
-                addInfo.amountBMin
-            );
-            address pair = YapeswapLibrary.pairFor(
-                factory,
-                addInfo.tokenA,
-                addInfo.tokenAsub,
-                addInfo.tokenB,
-                addInfo.tokenBsub
-            );
-            ERC165Checker.supportsInterface(addInfo.tokenA, 0xd9b67a26)
+        (amountA, amountB) = _addLiquidity(
+            addInfo.tokenA,
+            addInfo.tokenAsub,
+            addInfo.tokenB,
+            addInfo.tokenBsub,
+            addInfo.amountADesired,
+            addInfo.amountBDesired,
+            addInfo.amountAMin,
+            addInfo.amountBMin
+        );
+        address pair = YapeswapLibrary.pairFor(
+            factory,
+            addInfo.tokenA,
+            addInfo.tokenAsub,
+            addInfo.tokenB,
+            addInfo.tokenBsub
+        );
+        ERC165Checker.supportsInterface(addInfo.tokenA, 0xd9b67a26)
             ? IERC1155(addInfo.tokenA).safeTransferFrom(
                 msg.sender,
                 pair,
@@ -153,7 +151,7 @@ contract YapeswapRouter is IYapeswapRouter {
                 pair,
                 amountA
             );
-            ERC165Checker.supportsInterface(addInfo.tokenB, 0xd9b67a26)
+        ERC165Checker.supportsInterface(addInfo.tokenB, 0xd9b67a26)
             ? IERC1155(addInfo.tokenB).safeTransferFrom(
                 msg.sender,
                 pair,
@@ -167,7 +165,7 @@ contract YapeswapRouter is IYapeswapRouter {
                 pair,
                 amountB
             );
-            liquidity = IYapeswapPair(pair).mint(addInfo.to);
+        liquidity = IYapeswapPair(pair).mint(addInfo.to);
     }
 
     function addLiquidityETH(
@@ -233,150 +231,124 @@ contract YapeswapRouter is IYapeswapRouter {
     }
 
     // **** REMOVE LIQUIDITY ****
-    function removeLiquidity(
-        address tokenA,
-        uint256 tokenAsub,
-        address tokenB,
-        uint256 tokenBsub,
-        uint256 liquidity,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    )
+    function removeLiquidity(removeLiquidityInfo memory info)
         public
         virtual
         override
-        ensure(deadline)
+        ensure(info.deadline)
         returns (uint256 amountA, uint256 amountB)
     {
         address pair = YapeswapLibrary.pairFor(
             factory,
-            tokenA,
-            tokenAsub,
-            tokenB,
-            tokenBsub
+            info.tokenA,
+            info.tokenAsub,
+            info.tokenB,
+            info.tokenBsub
         );
-        IYapeswapPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
+        IYapeswapPair(pair).transferFrom(msg.sender, pair, info.liquidity); // send liquidity to pair
         bool order;
         {
-            address token0 = getToken0(tokenA, tokenAsub, tokenB, tokenBsub);
-            order = (tokenA == token0);
+            address token0 = getToken0(
+                info.tokenA,
+                info.tokenAsub,
+                info.tokenB,
+                info.tokenBsub
+            );
+            order = (info.tokenA == token0);
         }
         {
-            (uint256 amount0, uint256 amount1) = IYapeswapPair(pair).burn(to);
+            (uint256 amount0, uint256 amount1) = IYapeswapPair(pair).burn(
+                info.to
+            );
             if (order) {
                 (amountA, amountB) = (amount0, amount1);
             } else {
                 (amountA, amountB) = (amount1, amount0);
             }
         }
-        require(amountA >= amountAMin, "YapeswapRouter: INSUFFICIENT_A_AMOUNT");
-        require(amountB >= amountBMin, "YapeswapRouter: INSUFFICIENT_B_AMOUNT");
+        require(
+            amountA >= info.amountAMin,
+            "YapeswapRouter: INSUFFICIENT_A_AMOUNT"
+        );
+        require(
+            amountB >= info.amountBMin,
+            "YapeswapRouter: INSUFFICIENT_B_AMOUNT"
+        );
     }
 
-    function removeLiquidityETH(
-        address token,
-        uint256 tokensub,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    )
+    function removeLiquidityETH(removeLiquidityETHInfo memory info)
         public
         virtual
         override
-        ensure(deadline)
+        ensure(info.deadline)
         returns (uint256 amountToken, uint256 amountETH)
     {
-        (amountToken, amountETH) = removeLiquidity(
-            token,
-            tokensub,
-            WETH,
-            0,
-            liquidity,
-            amountTokenMin,
-            amountETHMin,
-            address(this),
-            deadline
-        );
-        ERC165Checker.supportsInterface(token, 0xd9b67a26)
-            ? IERC1155(token).safeTransferFrom(
+        removeLiquidityInfo memory liqInfo;
+        liqInfo.tokenA = info.token;
+        liqInfo.tokenAsub = info.tokensub;
+        liqInfo.tokenB = WETH;
+        liqInfo.tokenBsub = 0;
+        liqInfo.liquidity = info.liquidity;
+        liqInfo.amountAMin = info.amountTokenMin;
+        liqInfo.amountBMin = info.amountETHMin;
+        liqInfo.to = address(this);
+        liqInfo.deadline = info.deadline;
+        (amountToken, amountETH) = removeLiquidity(liqInfo);
+        ERC165Checker.supportsInterface(info.token, 0xd9b67a26)
+            ? IERC1155(info.token).safeTransferFrom(
                 address(this),
-                to,
-                tokensub,
+                info.to,
+                info.tokensub,
                 amountToken,
                 new bytes(0)
             )
-            : ERC20TransferHelper.safeTransfer(token, to, amountToken);
+            : ERC20TransferHelper.safeTransfer(
+                info.token,
+                info.to,
+                amountToken
+            );
         IWETH9(WETH).withdraw(amountETH);
-        ERC20TransferHelper.safeTransferETH(to, amountETH);
+        ERC20TransferHelper.safeTransferETH(info.to, amountETH);
     }
 
     function permit(
-        address tokenA,
-        uint256 tokenAsub,
-        address tokenB,
-        uint256 tokenBsub,
-        uint256 liquidity,
-        uint256 deadline,
+        removeLiquidityInfo memory info,
         bool approveMax,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) private {
-        uint256 value = approveMax ? type(uint256).max : liquidity;
+        uint256 value = approveMax ? type(uint256).max : info.liquidity;
         IYapeswapPair(
             YapeswapLibrary.pairFor(
                 factory,
-                tokenA,
-                tokenAsub,
-                tokenB,
-                tokenBsub
+                info.tokenA,
+                info.tokenAsub,
+                info.tokenB,
+                info.tokenBsub
             )
-        ).permit(msg.sender, address(this), value, deadline, v, r, s);
+        ).permit(msg.sender, address(this), value, info.deadline, v, r, s);
     }
 
     function removeLiquidityWithPermit(
-        removeLiquidityInfo calldata info,
+        removeLiquidityInfo memory info,
+        bool approveMax,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external virtual override returns (uint256 amountA, uint256 amountB) {
         permit(
-            info.tokenA,
-            info.tokenAsub,
-            info.tokenB,
-            info.tokenBsub,
-            info.liquidity,
-            info.deadline,
-            info.approveMax,
+            info,
+            approveMax,
             v,
             r,
             s
         );
-        (amountA, amountB) = removeLiquidity(
-            info.tokenA,
-            info.tokenAsub,
-            info.tokenB,
-            info.tokenBsub,
-            info.liquidity,
-            info.amountAMin,
-            info.amountBMin,
-            info.to,
-            info.deadline
-        );
+        (amountA, amountB) = removeLiquidity(info);
     }
 
     function removeLiquidityETHWithPermit(
-        address token,
-        uint256 tokensub,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline,
+        removeLiquidityETHInfo memory info,
         bool approveMax,
         uint8 v,
         bytes32 r,
@@ -389,78 +361,64 @@ contract YapeswapRouter is IYapeswapRouter {
     {
         address pair = YapeswapLibrary.pairFor(
             factory,
-            token,
-            tokensub,
+            info.token,
+            info.tokensub,
             WETH,
             0
         );
-        uint256 value = approveMax ? type(uint256).max : liquidity;
+        uint256 value = approveMax ? type(uint256).max : info.liquidity;
         IYapeswapPair(pair).permit(
             msg.sender,
             address(this),
             value,
-            deadline,
+            info.deadline,
             v,
             r,
             s
         );
-        (amountToken, amountETH) = removeLiquidityETH(
-            token,
-            tokensub,
-            liquidity,
-            amountTokenMin,
-            amountETHMin,
-            to,
-            deadline
-        );
+        (amountToken, amountETH) = removeLiquidityETH(info);
     }
 
     // **** REMOVE LIQUIDITY (supporting fee-on-transfer tokens) ****
     function removeLiquidityETHSupportingFeeOnTransferTokens(
-        address token,
-        uint256 tokensub,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    ) public virtual override ensure(deadline) returns (uint256 amountETH) {
-        (, amountETH) = removeLiquidity(
-            token,
-            tokensub,
-            WETH,
-            0,
-            liquidity,
-            amountTokenMin,
-            amountETHMin,
-            address(this),
-            deadline
-        );
-        ERC165Checker.supportsInterface(token, 0xd9b67a26)
-            ? IERC1155(token).safeTransferFrom(
+        removeLiquidityETHInfo memory info
+    )
+        public
+        virtual
+        override
+        ensure(info.deadline)
+        returns (uint256 amountETH)
+    {
+        removeLiquidityInfo memory liqInfo;
+        liqInfo.tokenA = info.token;
+        liqInfo.tokenAsub = info.tokensub;
+        liqInfo.tokenB = WETH;
+        liqInfo.tokenBsub = 0;
+        liqInfo.liquidity = info.liquidity;
+        liqInfo.amountAMin = info.amountTokenMin;
+        liqInfo.amountBMin = info.amountETHMin;
+        liqInfo.to = address(this);
+        liqInfo.deadline = info.deadline;
+        (, amountETH) = removeLiquidity(liqInfo);
+        ERC165Checker.supportsInterface(info.token, 0xd9b67a26)
+            ? IERC1155(info.token).safeTransferFrom(
                 address(this),
-                to,
-                tokensub,
-                IERC1155(token).balanceOf(address(this), tokensub),
+                info.to,
+                info.tokensub,
+                IERC1155(info.token).balanceOf(address(this), info.tokensub),
                 new bytes(0)
             )
             : ERC20TransferHelper.safeTransfer(
-                token,
-                to,
-                IERC20(token).balanceOf(address(this))
+                info.token,
+                info.to,
+                IERC20(info.token).balanceOf(address(this))
             );
         IWETH9(WETH).withdraw(amountETH);
-        ERC20TransferHelper.safeTransferETH(to, amountETH);
+        ERC20TransferHelper.safeTransferETH(info.to, amountETH);
     }
 
     function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
-        address token,
-        uint256 tokensub,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline,
+        removeLiquidityETHInfo memory info,
         bool approveMax,
         uint8 v,
         bytes32 r,
@@ -468,30 +426,22 @@ contract YapeswapRouter is IYapeswapRouter {
     ) external virtual override returns (uint256 amountETH) {
         address pair = YapeswapLibrary.pairFor(
             factory,
-            token,
-            tokensub,
+            info.token,
+            info.tokensub,
             WETH,
             0
         );
-        uint256 value = approveMax ? type(uint256).max : liquidity;
+        uint256 value = approveMax ? type(uint256).max : info.liquidity;
         IYapeswapPair(pair).permit(
             msg.sender,
             address(this),
             value,
-            deadline,
+            info.deadline,
             v,
             r,
             s
         );
-        amountETH = removeLiquidityETHSupportingFeeOnTransferTokens(
-            token,
-            tokensub,
-            liquidity,
-            amountTokenMin,
-            amountETHMin,
-            to,
-            deadline
-        );
+        amountETH = removeLiquidityETHSupportingFeeOnTransferTokens(info);
     }
 
     // **** SWAP ****
@@ -504,14 +454,8 @@ contract YapeswapRouter is IYapeswapRouter {
     ) internal virtual {
         for (uint256 i; i < tokenPath.length - 1; i++) {
             swapInfo memory swap;
-            (swap.input, swap.output) = (
-                tokenPath[i],
-                tokenPath[i + 1]
-            );
-            (swap.inputsub, swap.outputsub) = (
-                subPath[i],
-                subPath[i + 1]
-            );
+            (swap.input, swap.output) = (tokenPath[i], tokenPath[i + 1]);
+            (swap.inputsub, swap.outputsub) = (subPath[i], subPath[i + 1]);
             (address token0, , , ) = YapeswapLibrary.sortTokens(
                 swap.input,
                 swap.inputsub,
@@ -856,14 +800,8 @@ contract YapeswapRouter is IYapeswapRouter {
     ) internal virtual {
         for (uint256 i; i < tokenPath.length - 1; i++) {
             swapInfo memory swap;
-            (swap.input, swap.output) = (
-                tokenPath[i],
-                tokenPath[i + 1]
-            );
-            (swap.inputsub, swap.outputsub) = (
-                subPath[i],
-                subPath[i + 1]
-            );
+            (swap.input, swap.output) = (tokenPath[i], tokenPath[i + 1]);
+            (swap.inputsub, swap.outputsub) = (subPath[i], subPath[i + 1]);
             (address token0, , , ) = YapeswapLibrary.sortTokens(
                 swap.input,
                 swap.inputsub,
@@ -882,12 +820,16 @@ contract YapeswapRouter is IYapeswapRouter {
             {
                 // scope to avoid stack too deep errors
                 (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
-                (uint256 reserveInput, uint256 reserveOutput) = swap.input == token0
+                (uint256 reserveInput, uint256 reserveOutput) = swap.input ==
+                    token0
                     ? (reserve0, reserve1)
                     : (reserve1, reserve0);
                 swap.amountInput = (
                     ERC165Checker.supportsInterface(swap.input, 0xd9b67a26)
-                        ? IERC1155(swap.input).balanceOf(address(pair), swap.inputsub)
+                        ? IERC1155(swap.input).balanceOf(
+                            address(pair),
+                            swap.inputsub
+                        )
                         : IERC20(swap.input).balanceOf(address(pair))
                 ).sub(reserveInput);
                 swap.amountOutput = YapeswapLibrary.getAmountOut(

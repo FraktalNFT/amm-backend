@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IYapeswapFactory.sol";
 import "./YapeswapPair.sol";
-import "openzeppelin/interfaces/IERC1155.sol";
+import "@openzeppelin/contracts/interfaces/IERC1155.sol";
 
 contract YapeswapFactory is IYapeswapFactory {
     address public override(IYapeswapFactory) feeTo;

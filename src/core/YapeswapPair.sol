@@ -3,18 +3,18 @@
 pragma solidity ^0.8.0;
 
 import "./YapeswapERC20.sol";
-import "openzeppelin/utils/ERC20TransferHelper.sol";
-import "openzeppelin/utils/introspection/ERC165Checker.sol";
-import "openzeppelin/utils/math/Math.sol";
+import "../ERC20TransferHelper.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "../math/Sqrt.sol";
 import "../math/UQ112x112.sol";
-import "openzeppelin/interfaces/IERC20.sol";
-import "openzeppelin/interfaces/IERC1155.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "@openzeppelin/contracts/interfaces/IERC1155.sol";
 import "./interfaces/IYapeswapFactory.sol";
 import "./interfaces/IYapeswapCallee.sol";
 import "./interfaces/IYapeswapPair.sol";
-import "openzeppelin/token/ERC1155/utils/ERC1155Holder.sol";
-import "openzeppelin/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract YapeswapPair is IYapeswapPair, YapeswapERC20, ERC1155Holder {
     // TODO(Optimize gas by using a memory struct for token info)

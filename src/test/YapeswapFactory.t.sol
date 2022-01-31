@@ -2,34 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import "openzeppelin/token/ERC20/ERC20.sol";
-import "openzeppelin/token/ERC1155/ERC1155.sol";
-import "openzeppelin/utils/Ownable.sol";
+import "./Common.sol";
 import "../core/YapeswapFactory.sol";
 import "../core/YapeswapPair.sol";
-import "openzeppelin/token/ERC1155/utils/ERC1155Holder.sol";
 import "ds-test/test.sol";
-
-contract MockERC20Token is ERC20, Ownable {
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
-
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
-    }
-}
-
-contract MockERC1155Token is ERC1155, Ownable {
-    constructor(string memory name, string memory symbol) ERC1155(string("")) {}
-
-    function mint(
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes calldata data
-    ) public onlyOwner {
-        _mint(to, id, amount, data);
-    }
-}
 
 // TODO(Our holder may need to be able to do some stuff here)
 

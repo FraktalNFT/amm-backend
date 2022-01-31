@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../../core/interfaces/IYapeswapPair.sol";
-import "openzeppelin/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 library YapeswapLibrary {
     using SafeMath for uint256;
@@ -97,7 +97,15 @@ library YapeswapLibrary {
             address token1,
             uint256 token1sub
         ) = sortTokens(tokenA, tokenAsub, tokenB, tokenBsub);
-        // TODO(Recalculate pair init code)
+        // How to obtain the init code hash:
+        //contract YapeswapLibraryTest is DSTest {
+        //
+        //function testPairFor() public {
+        //bytes32 contract_hash = keccak256(type(YapeswapPair).creationCode);
+        //console.logBytes32(contract_hash);
+        //assert(contract_hash == hex"e2ca7e78b6ca8611bcf6c0c17317ecc8f6af07d37dfcae949f932c9ee4312914");
+        // }
+        // }
         pair = address(
             uint160(
                 uint256(
@@ -113,7 +121,7 @@ library YapeswapLibrary {
                                     token1sub
                                 )
                             ),
-                            hex"96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f" // init code hash
+                            hex"e2ca7e78b6ca8611bcf6c0c17317ecc8f6af07d37dfcae949f932c9ee4312914" // init code hash
                         )
                     )
                 )

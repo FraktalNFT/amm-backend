@@ -2,38 +2,13 @@
 
 pragma solidity ^0.8.0;
 
-import "openzeppelin/token/ERC20/ERC20.sol";
-import "openzeppelin/token/ERC1155/ERC1155.sol";
-import "openzeppelin/utils/Ownable.sol";
+import "./Common.sol";
 import "../core/YapeswapERC20.sol";
 import "../core/YapeswapFactory.sol";
 import "../core/YapeswapPair.sol";
-import "openzeppelin/token/ERC1155/utils/ERC1155Holder.sol";
-import "openzeppelin/utils/introspection/ERC165Checker.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import "ds-test/test.sol";
-
-contract MockERC20Token is ERC20, Ownable {
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
-
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
-    }
-}
-
-contract MockERC1155Token is ERC1155, Ownable {
-    constructor(string memory name, string memory symbol) ERC1155(string("")) {}
-
-    function mint(
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes calldata data
-    ) public onlyOwner {
-        _mint(to, id, amount, data);
-    }
-}
-
-// TODO(Our holder may need to be able to do some stuff here)
 
 contract YapeswapPairTest is DSTest, ERC1155Holder {
     MockERC20Token weth;
@@ -47,11 +22,11 @@ contract YapeswapPairTest is DSTest, ERC1155Holder {
         factory = new YapeswapFactory(address(this));
 
         // Send mock weth to holder
-        weth.mint(address(this), 10000000000000000000);
+        weth.mint(address(this), 8 ether);
 
         // Send a mock fraktal token to holder
         fraktal.mint(address(this), 1, 1, new bytes(0));
-        fraktal.mint(address(this), 2, 10000, new bytes(0));
+        fraktal.mint(address(this), 2, 8 ether, new bytes(0));
 
         // Setup a weth/fraktal pair
         pair = YapeswapPair(
@@ -59,12 +34,12 @@ contract YapeswapPairTest is DSTest, ERC1155Holder {
         );
 
         // Send some weth and fraktal to the pair
-        weth.transfer(address(pair), 1000000000000000000);
+        weth.transfer(address(pair), 1 ether);
         fraktal.safeTransferFrom(
             address(this),
             address(pair),
             2,
-            5000,
+            4 ether,
             new bytes(0)
         );
 
@@ -91,7 +66,6 @@ contract YapeswapPairTest is DSTest, ERC1155Holder {
         assert(pair.factory() == address(factory));
     }
 
-    // TODO(Check these 5 tests against sort)
     function testPairToken0() public {
         pair.token0();
     }
@@ -114,6 +88,45 @@ contract YapeswapPairTest is DSTest, ERC1155Holder {
     }
 
     function testPairPrice0CumulativeLast() public {
-        // TODO(Figure out how to test this correctly)
+        uint256 price0 = pair.price0CumulativeLast();
     }
+
+    function testPairPrice1CumulativeLast() public {
+        uint256 price1 = pair.price1CumulativeLast();
+    }
+
+    function testkLast() public {
+        uint256 klast = pair.kLast();
+    }
+
+    function testMint() public {
+        // We already minted in the setup, so here we just make assertions about the balances
+        assert(pair.totalSupply() == 2 ether);
+        assert(weth.balanceOf(address(pair)) == 1 ether);
+        assert(fraktal.balanceOf(address(pair), 2) == 4 ether);
+    }
+
+    function testBurn() public {
+        pair.transfer(address(pair), 1 ether);
+        (uint256 amount0, uint256 amount1) = pair.burn(address(this));
+        assert(pair.totalSupply() == 1 ether);
+        assert(weth.balanceOf(address(pair)) == 0.5 ether);
+        assert(fraktal.balanceOf(address(pair), 2) == 2 ether);
+    }
+
+    function testSwap() public {
+        bytes memory data;
+        weth.transfer(address(pair), 1 ether);
+        pair.swap(1.9969 ether, 0 ether, address(this), data);
+    }
+
+    function testSkim() public {
+        pair.skim(address(this));
+    }
+
+    function testSync() public {
+        pair.sync();
+    }
+
+    // Initialize is tested implicitly at creation by the factory
 }

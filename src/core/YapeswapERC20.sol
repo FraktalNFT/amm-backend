@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "./interfaces/IYapeswapERC20.sol";
-import "openzeppelin/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract YapeswapERC20 is IYapeswapERC20 {
     using SafeMath for uint256;

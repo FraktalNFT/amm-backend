@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../../core/interfaces/IYapeswapPair.sol";
-import "openzeppelin/utils/math/FixedPoint.sol";
+import "../../math/FixedPoint.sol";
 
 // library with helper methods for oracles that are concerned with computing average prices
 library YapeswapOracleLibrary {
